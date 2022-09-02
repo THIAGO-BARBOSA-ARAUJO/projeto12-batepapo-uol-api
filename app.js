@@ -55,6 +55,15 @@ app.post("/participants", (req, res) => {
     
 });
 
+app.get("/participants", (req, res) => {
+    //envia os usuários do banco de dados
+    db.collection("usuarios").find().toArray().then(users => {
+        res.status(200).send(users)
+        //console.log(users); // array de usuários
+    });
+    
+    //res.status(200).send()
+})
 
 app.listen(5000, () => {
     console.log("servidor ligado!")
