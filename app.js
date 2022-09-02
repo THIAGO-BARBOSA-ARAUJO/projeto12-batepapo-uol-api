@@ -22,12 +22,23 @@ const nameSchema = joi.object({
             .required() 
 }).options({ abortEarly: false })
 
-var now = dayjs()
+const menssagemSchema = joi.object({
+    to: joi.string()
+    .empty()
+    .required(),
+    text: joi.string()
+    .empty()
+    .required(),
+    type: joi.any().valid("message", "private_message").required()
+}).options({ abortEarly: false })
+
+
 
 
 app.post("/participants", (req, res) => {
 	const { name } = req.body
-    
+    let time = dayjs().format("HH:mm:ss")
+
     async function ValidaDados() {
 
         const validador = nameSchema.validate(req.body)
@@ -47,7 +58,7 @@ app.post("/participants", (req, res) => {
         }
         // inserindo usuário
         db.collection("usuarios").insertOne({name: name, lastStatus: Date.now()});
-        db.collection("mensagens").insertOne({from: name, to: 'Todos', text: 'entra na sala...', type: 'status', time: `${now.hour()}:${now.minute()}:${now.second()}`})
+        db.collection("mensagens").insertOne({from: name, to: 'Todos', text: 'entra na sala...', type: 'status', time})
         res.status(201).send({message: "Usuário cadastrado com sucesso!"})
     }
       
@@ -61,9 +72,40 @@ app.get("/participants", (req, res) => {
         res.status(200).send(users)
         //console.log(users); // array de usuários
     });
-    
-    //res.status(200).send()
 })
+
+app.post("/messages", (req, res) => {
+    const {to, text, type} = req.body
+    const { user } = req.headers
+    let time = dayjs().format("HH:mm:ss")
+    
+    async function ValidaDados() {
+
+        const validador = menssagemSchema.validate({to, text, type})
+    
+        if(validador.error){
+            console.log(validador.error)
+            res.sendStatus(422)
+            console.log(validador.error)
+            return
+        }
+
+        const resposta = await db.collection("usuarios").findOne({ name: user})
+        console.log(resposta)    
+        if(resposta){
+             // inserindo a mensagem no banco de dados.
+        
+            db.collection("mensagens").insertOne({from: user, to: to, text: text, type: type, time})
+            res.status(200).send({message: "O usário existe!"})
+            return
+        }
+       
+        res.status(422).send("O usuário não existe!")
+    }
+    ValidaDados()
+    //res.sendStatus(200)
+})
+
 
 app.listen(5000, () => {
     console.log("servidor ligado!")
