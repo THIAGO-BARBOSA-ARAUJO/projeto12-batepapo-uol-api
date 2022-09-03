@@ -1,4 +1,4 @@
-import { MongoClient } from "mongodb"
+import { MongoClient, ObjectId } from "mongodb"
 import express from "express"
 import joi from "joi"
 import cors from "cors"
@@ -16,7 +16,22 @@ mongoClient.connect().then(() => {
     db = mongoClient.db("teste")
 })
 
-
+setInterval( async()=>{
+    const tempoAtual = Date.now()
+    let time = dayjs().format("HH:mm:ss")
+    try {
+        const usuarios = await db.collection("usuarios").find().toArray()
+        usuarios.forEach(element => {
+        const excluiUser = tempoAtual - element.lastStatus
+        if(excluiUser > 10000){
+            db.collection("usuarios").deleteOne({_id: ObjectId(element._id)})
+            db.collection("mensagens").insertOne({from: element.name, to: 'Todos', text: 'sai da sala...', type: 'status', time })
+        } 
+      });
+    } catch (error) {
+        
+    }
+}, 15000)
 
 const nameSchema = joi.object({
             name: joi.string()
@@ -116,7 +131,7 @@ app.get("/messages",async (req, res) => {
        const limit = 100
     }
     try {
-        const resposta = await db.collection("mensagens").find({$or: [{type: "message"}, {to: user}, {from: user}]}).toArray()
+        const resposta = await db.collection("mensagens").find({$or: [{to: user}, {from: user}, {type: "message"}, {type: "status"}]}).toArray()
         res.status(200).send(resposta.slice(-limit))   
     } catch (error) {
         res.sendStatus(500)
