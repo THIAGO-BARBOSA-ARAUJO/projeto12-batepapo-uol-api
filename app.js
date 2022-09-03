@@ -16,6 +16,8 @@ mongoClient.connect().then(() => {
     db = mongoClient.db("teste")
 })
 
+
+
 const nameSchema = joi.object({
             name: joi.string()
             .empty()
@@ -31,7 +33,6 @@ const menssagemSchema = joi.object({
     .required(),
     type: joi.any().valid("message", "private_message").required()
 }).options({ abortEarly: false })
-
 
 
 
@@ -104,6 +105,41 @@ app.post("/messages", (req, res) => {
     }
     ValidaDados()
     //res.sendStatus(200)
+})
+
+app.get("/messages",async (req, res) => {
+    //const user = req.headers.user
+    const { user }  = req.headers
+    const { limit } = req.query
+    console.log(user)
+    if(!limit){
+       const limit = 100
+    }
+    try {
+        const resposta = await db.collection("mensagens").find({$or: [{type: "message"}, {to: user}, {from: user}]}).toArray()
+        res.status(200).send(resposta.slice(-limit))   
+    } catch (error) {
+        res.sendStatus(500)
+    }
+
+})
+
+app.post("/status", async (req, res)=>{
+    const { user } = req.headers
+    
+    try {
+        const resposta = await db.collection("usuarios").findOne({ name: user })
+        console.log(resposta)
+        if(!resposta) {
+            res.sendStatus(404)
+            return
+        }
+        await db.collection("usuarios").updateOne({name: user},{$set: {lastStatus: Date.now()}})
+        res.sendStatus(200)
+    } catch (error) {
+        res.sendStatus(500)
+    }
+
 })
 
 
