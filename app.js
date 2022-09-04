@@ -16,7 +16,7 @@ mongoClient.connect().then(() => {
     db = mongoClient.db("teste")
 })
 
-setInterval( async()=>{
+setInterval( async ()=>{
     const tempoAtual = Date.now()
     let time = dayjs().format("HH:mm:ss")
     try {
@@ -157,7 +157,26 @@ app.post("/status", async (req, res)=>{
 
 })
 
+app.delete("/messages/:id_mensagem", async (req, res) => {
+    const { id_mensagem } = req.params
+    const { user } = req.headers
+    
+    try {
+        const resp = await db.collection("mensagens").findOne({_id: ObjectId(id_mensagem)})
+        if(resp.from !== user){
+            res.sendStatus(401)
+            return
+        }
+        await db.collection("mensagens").deleteOne({_id: ObjectId(id_mensagem)})
+        res.sendStatus(200)
+    } catch (error) {
+        res.sendStatus(404)
+    }
+    
+})
 
 app.listen(5000, () => {
     console.log("servidor ligado!")
 })
+
+//implementar o dotenv
