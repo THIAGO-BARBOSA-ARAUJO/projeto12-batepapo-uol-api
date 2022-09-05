@@ -3,19 +3,22 @@ import express from "express"
 import joi from "joi"
 import cors from "cors"
 import dayjs from "dayjs"
+import dotenv from "dotenv"
+
 
 const app = express()
 app.use(express.json())
 app.use(cors())
+dotenv.config();
 
 //conectando ao banco
-const mongoClient = new MongoClient("mongodb://localhost:27017")
+const mongoClient = new MongoClient(process.env.MONGO_URI)
 let db
 
 mongoClient.connect().then(() => {
     db = mongoClient.db("teste")
 })
-
+/*
 setInterval( async ()=>{
     const tempoAtual = Date.now()
     let time = dayjs().format("HH:mm:ss")
@@ -32,7 +35,7 @@ setInterval( async ()=>{
         
     }
 }, 15000)
-
+*/
 const nameSchema = joi.object({
             name: joi.string()
             .empty()
@@ -49,7 +52,15 @@ const menssagemSchema = joi.object({
     type: joi.any().valid("message", "private_message").required()
 }).options({ abortEarly: false })
 
-
+const validaMensagensPut = joi.object({
+    to: joi.string()
+    .empty()
+    .required(),
+    text: joi.string()
+    .empty()
+    .required(),
+    type: joi.any().valid("message", "private_message").required()
+}).options({ abortEarly: false })
 
 app.post("/participants", (req, res) => {
 	const { name } = req.body
@@ -128,13 +139,16 @@ app.get("/messages",async (req, res) => {
     const { limit } = req.query
     console.log(user)
     if(!limit){
-       const limit = 100
+        const semLimite = await db.collection("mensagens").find({$or: [{to: user}, {from: user}, {type: "message"}, {type: "status"}]}).toArray()
+        res.status(200).send(semLimite)
     }
-    try {
-        const resposta = await db.collection("mensagens").find({$or: [{to: user}, {from: user}, {type: "message"}, {type: "status"}]}).toArray()
-        res.status(200).send(resposta.slice(-limit))   
-    } catch (error) {
-        res.sendStatus(500)
+    else{
+        try {
+            const resposta = await db.collection("mensagens").find({$or: [{to: user}, {from: user}, {type: "message"}, {type: "status"}]}).toArray()
+            res.status(200).send(resposta.slice(-limit))   
+        } catch (error) {
+            res.sendStatus(500)
+        }
     }
 
 })
@@ -175,8 +189,66 @@ app.delete("/messages/:id_mensagem", async (req, res) => {
     
 })
 
+app.put("/messages/:id_mensagem", async (req, res) => {
+    const {to, text, type} = req.body
+    const { user } = req.headers
+    const { id_mensagem } = req.params
+    const validador = validaMensagensPut.validate({to, text, type})
+
+    if(validador.error){
+        res.status(422).send("não passou na validação")
+        return
+    }
+
+    try {
+        const existeUsuario = await db.collection("usuarios").findOne({name: user})
+        console.log(existeUsuario)
+        if(!existeUsuario){
+            res.status(422).send("O usuário não existe!")
+            return
+        }
+        
+        const existeOId = await db.collection("mensagens").findOne({_id: ObjectId(id_mensagem)})
+        console.log(existeOId)
+        if(!existeOId){
+            res.status(404).send("O ID não existe no banco")
+            return
+        }
+        if(existeOId.from !== user){
+            res.status(401).send("O usuário não é o dono da mensagem!")
+            return
+        }
+    } catch (error) {
+        console.log(error)
+    }
+
+    db.collection("mensagens").updateOne({_id: ObjectId(id_mensagem) }, { $set: req.body });
+    res.status(200).send("Mudou no banco de dados")
+    /*
+
+    
+    try {
+        const existeMensagem = await db.collection("mensagens").findOne({_id: ObjectId(id_mensagem)})
+
+        if(!existeMensagem){
+            res.status(404).send("A mensagem não existe!")
+            return
+    }
+
+        if(existeMensagem !== user) {
+            res.status(401).send("O usuário não é dono da mensagem")
+    }
+    } catch (error) {
+        console.log(error)
+    }
+
+    */
+
+
+
+})
+
 app.listen(5000, () => {
     console.log("servidor ligado!")
 })
 
-//implementar o dotenv
