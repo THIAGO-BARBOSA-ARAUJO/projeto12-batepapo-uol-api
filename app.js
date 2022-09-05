@@ -18,7 +18,7 @@ let db
 mongoClient.connect().then(() => {
     db = mongoClient.db("batepapoUolApi")
 })
-/*
+
 setInterval( async ()=>{
     const tempoAtual = Date.now()
     let time = dayjs().format("HH:mm:ss")
@@ -35,7 +35,7 @@ setInterval( async ()=>{
         
     }
 }, 15000)
-*/
+
 const nameSchema = joi.object({
             name: joi.string()
             .empty()
@@ -224,27 +224,6 @@ app.put("/messages/:id_mensagem", async (req, res) => {
 
     db.collection("mensagens").updateOne({_id: ObjectId(id_mensagem) }, { $set: req.body });
     res.status(200).send("Mudou no banco de dados")
-    /*
-
-
-    try {
-        const existeMensagem = await db.collection("mensagens").findOne({_id: ObjectId(id_mensagem)})
-
-        if(!existeMensagem){
-            res.status(404).send("A mensagem não existe!")
-            return
-    }
-
-        if(existeMensagem !== user) {
-            res.status(401).send("O usuário não é dono da mensagem")
-    }
-    } catch (error) {
-        console.log(error)
-    }
-
-    */
-
-
 
 })
 
