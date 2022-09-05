@@ -16,7 +16,7 @@ const mongoClient = new MongoClient(process.env.MONGO_URI)
 let db
 
 mongoClient.connect().then(() => {
-    db = mongoClient.db("teste")
+    db = mongoClient.db("batepapoUolApi")
 })
 /*
 setInterval( async ()=>{
@@ -226,7 +226,7 @@ app.put("/messages/:id_mensagem", async (req, res) => {
     res.status(200).send("Mudou no banco de dados")
     /*
 
-    
+
     try {
         const existeMensagem = await db.collection("mensagens").findOne({_id: ObjectId(id_mensagem)})
 
